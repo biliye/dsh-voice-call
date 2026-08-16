@@ -1,0 +1,9 @@
+# dsh-voice-call bundle patch: inserts the dual-face plugin row into the web
+# profile roster. The node half (exports ".") runs in the host process
+# (task distribution, voice text injection, TTS/ASR bridge, /api/voice-call
+# routes, voice_task tool, voiceAssistant service), and the `dsh.client`
+# declaration in package.json makes the browser half (exports "./client",
+# served at /plugins/dsh-voice-call/client.js) load in the web GUI.
+- insert:
+    - id: voice-call
+      name: '@biliye/dsh-voice-call'

@@ -1,0 +1,13 @@
+node_modules/
+*.log
+.DS_Store
+*.local
+.vscode/
+.idea/
+# 用户本地设置/密钥相关（不进仓库）
+*.key
+*.pem
+.env
+
+fun/
+
