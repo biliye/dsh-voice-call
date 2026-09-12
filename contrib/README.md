@@ -51,9 +51,16 @@ curl -sI https://github.com/biliye/dsh-voice-call/releases/latest/download/dsh-v
 4. 在 GitHub 上对 `awesome-dsh-plugin:main` 开 PR，标题例如 `Add biliye/dsh-voice-call (voice)`；
    一个 PR 最多 3 条，本仓库只提 1 条。
 
-> 本机实测：从这台机器的 shell 到 GitHub 的 git 通道是断的（`http.proxy` 指向的
-> `127.0.0.1:26561` 无响应，直连 TLS 失败），所以上面的 fork/PR 需要你在能访问 GitHub 的
-> 环境里执行；本条目的内容与格式已在本仓库离线校验通过（见 `contrib/` 同级说明）。
+> 传输提示（本机 2026-09-12 实测，供本机维护者参考）：
+>
+> - `api.github.com`、`codeload.github.com` 可**直连**；`github.com` 直连**连接超时**，必须走本机代理。
+> - 走代理时该代理对 GitHub 做 TLS 中间人，`git` 用 schannel 与 openssl 两种后端都因证书链不受信而失败
+>   （`SSL certificate problem: unable to get local issuer certificate`），直连 `git push` 则报
+>   `OpenSSL SSL_read: SSL_ERROR_SYSCALL` 或直接挂住；`git ls-remote` 因直连可读而正常。
+> - 所以本机的发布走 **GitHub REST API**（token 需 `repo` + `workflow` 权限）：把本地提交逐字节复刻成远端
+>   提交（往返校验 tree/commit SHA 与本地一致），再创建 tag/Release，最后由 tag 触发 workflow 产出附件。
+>   本次会话用的脚本在 `.debug/gh-publish.mjs`（`.debug/` 已 gitignore，不入库）。
+> - 换到能正常 `git push` 的环境时，上面两条命令仍然适用；本机则需要 API 或修好代理的证书信任。
 
 ## 收录条件核对（本仓库现状）
 
