@@ -51,16 +51,20 @@ curl -sI https://github.com/biliye/dsh-voice-call/releases/latest/download/dsh-v
 4. 在 GitHub 上对 `awesome-dsh-plugin:main` 开 PR，标题例如 `Add biliye/dsh-voice-call (voice)`；
    一个 PR 最多 3 条，本仓库只提 1 条。
 
-> 传输提示（本机 2026-09-12 实测，供本机维护者参考）：
+> 传输提示（本机实测，供本机维护者参考）：
 >
-> - `api.github.com`、`codeload.github.com` 可**直连**；`github.com` 直连**连接超时**，必须走本机代理。
-> - 走代理时该代理对 GitHub 做 TLS 中间人，`git` 用 schannel 与 openssl 两种后端都因证书链不受信而失败
->   （`SSL certificate problem: unable to get local issuer certificate`），直连 `git push` 则报
->   `OpenSSL SSL_read: SSL_ERROR_SYSCALL` 或直接挂住；`git ls-remote` 因直连可读而正常。
-> - 所以本机的发布走 **GitHub REST API**（token 需 `repo` + `workflow` 权限）：把本地提交逐字节复刻成远端
->   提交（往返校验 tree/commit SHA 与本地一致），再创建 tag/Release，最后由 tag 触发 workflow 产出附件。
->   本次会话用的脚本在 `.debug/gh-publish.mjs`（`.debug/` 已 gitignore，不入库）。
-> - 换到能正常 `git push` 的环境时，上面两条命令仍然适用；本机则需要 API 或修好代理的证书信任。
+> - **2026-09-12 晚（代理开启后）实测：`git push` 已可直接用**——该代理的 MITM 根证书
+>   `CN=WMPVP Local CA`（`WMPVP Development`）已装进 Windows 根 store，所以 `git` 用 **schannel**
+>   后端即可通过校验：`git -c http.sslBackend=schannel push origin main`。本仓库 `.git/config` 里写的是
+>   `http.sslBackend=openssl`，openssl 只认自己的 CA bundle，于是报
+>   `SSL certificate problem: unable to get local issuer certificate`；`-c` 覆盖一次即可，或
+>   `git config http.sslBackend schannel` 固化。推送身份用 Windows 凭据管理器里已存的
+>   `git:https://github.com`，不需要 token。代理地址来自 `~/.gitconfig` 的 `http.proxy=127.0.0.1:26561`。
+> - 代理未开时的旧结论（仍成立）：`api.github.com`、`codeload.github.com` 可直连；`github.com`
+>   直连超时或 TLS 失败。此时走 **GitHub REST API** 路线（token 需 `repo` + `workflow` 权限）：把本地
+>   提交逐字节复刻成远端提交（往返校验 tree/commit SHA 与本地一致），再创建 tag/Release，脚本在
+>   `.debug/gh-publish.mjs`（`.debug/` 已 gitignore，不入库）。注意该脚本的 `push` 阶段**一次只复刻
+>   HEAD 一个提交**，本地领先远端多个提交时会以 `remote main is not the local parent` 拒绝执行。
 
 ## 收录条件核对（本仓库现状）
 
@@ -103,8 +107,16 @@ CI 还会跑 `awesome-lint` 与站点构建（双语一致性、分隔符等）�
 
 0.2.2 的内容：专属会话无法加载的两处修复（notice 消息 source 契约、`sessionPersistence` 快照形状，
 见 `FIX-2026-09-12.md`）＋ 播报链路剔除 `Route: …` 等元信息行（此前闲聊回复会把路由声明念出来）。
-⚠ release tarball 仍停在 0.2.1：GitHub 侧需要推 `v0.2.2` tag（本机 `git push` 到 github.com 不通，
-见下方传输提示），推完 `releases/latest/download/dsh-voice-call.tgz` 才是 0.2.2。
+
+发布状态：npm `0.2.2` 由本机 `npm publish` 发布；GitHub Release `v0.2.2` 由 tag 触发 `release.yml`
+产出，附件 `dsh-voice-call.tgz`（44263B，sha1 `d470207e9827c329b8392d862e01c6bc79587401`）与 npm
+tarball 是**同一份字节**。三条安装路径（npm / `releases/latest/download` / github 源码）现在都是 0.2.2。
+
+⚠ 同一个 tag 触发的 `publish-npm.yml` 这次是**失败**的 run：失败步骤是
+`npx -y npm@latest publish --provenance --access public`。两种预期原因之一，日志需登录 GitHub 才能看：
+① 0.2.2 已由本机发布过，npm 拒绝重复版本（workflow 头部也写了这条）；② Trusted Publisher 尚未在
+npmjs 配好。下次发版二选一：**只改版本号 + 推 tag**，让 CI 用 OIDC 发布（需 ① 先不本机发布、② 配好
+Trusted Publisher）；或**本机发布后再推 tag**，此时 CI 那一步必红，属预期。
 
 ### 能用的凭据长什么样（本机踩坑的全部结论）
 
