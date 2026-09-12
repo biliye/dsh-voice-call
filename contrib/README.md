@@ -98,8 +98,24 @@ CI 还会跑 `awesome-lint` 与站点构建（双语一致性、分隔符等）�
 （已是），映射由 registry 自动采集，条目里**不要**手写 `npm:` 键——校验会拒绝。
 
 ```sh
-npm publish --access public
+npm login --registry=https://registry.npmjs.org/   # 必须显式指定：本机默认 registry 是镜像
+npm publish                                        # 走 publishConfig.registry，不受本机 registry 影响
 ```
+
+> ⚠️ 本机踩坑记录（2026-09-12）：`C:\Users\123\.npmrc` 里 `registry=https://registry.npmmirror.com`，
+> 而 **npmmirror 是只读镜像、不能发布**。当时 `npm publish --access public` 把包打好了
+> （`@biliye/dsh-voice-call@0.2.1`，42.9 kB）却在最后一步中止：
+> `ENEEDAUTH: This command requires you to be logged in to https://registry.npmmirror.com`
+> ——一个字节都没上传，`registry.npmjs.org` 与 npmmirror 上都是 404。为此 `package.json` 已固定
+> `publishConfig.registry = https://registry.npmjs.org/`；但**登录**那一步 `publishConfig` 管不到，
+> 仍要显式带 `--registry`，或在 `~/.npmrc` 写 `//registry.npmjs.org/:_authToken=...`。
+
+> 另外两点：
+> - scoped 包要求 `@biliye` 这个 scope 归你——npm 用户名就是 `biliye`，或你已创建 `biliye` org；
+>   否则要改包名（`package.json` 的 `name` 与 `cordis.patch.yml` 的 row `name` 必须同步改，两者必须一致）。
+> - npm 站内**搜索索引有延迟**（几分钟到数小时）。验证请用
+>   `https://www.npmjs.com/package/@biliye/dsh-voice-call` 或 `npm view @biliye/dsh-voice-call`，
+>   搜不到 ≠ 没发上去。
 
 发布后 ① 号安装方式（`dsh plugin --profile web add @biliye/dsh-voice-call`）才成立，见根 README 的
 「📦 安装」。
