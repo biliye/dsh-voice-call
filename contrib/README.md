@@ -17,7 +17,7 @@
 ```sh
 git status --short                 # 本次改动已随仓库提交；若你另有改动，先提交它们
 git push origin main
-git tag v0.2.1 && git push origin v0.2.1     # 触发 .github/workflows/release.yml
+git tag v0.2.2 && git push origin v0.2.2     # 触发 .github/workflows/release.yml
 ```
 
 然后确认链接真的可用再投稿：
@@ -92,14 +92,19 @@ CI 还会跑 `awesome-lint` 与站点构建（双语一致性、分隔符等）�
   市场用 `includePrerelease: true` 求值，所以这个范围能匹配 `0.1.5-rc.1` 这类预发布版本；
   但声明错误会让用户在「只显示兼容插件」的筛选下看不到本插件，所以在验证之前不要写。
 
-## npm 发布（2026-09-12 已完成：0.2.1）
+## npm 发布（2026-09-12：0.2.1 → 0.2.2 已发布）
 
 收录不要求 npm；发布只是让市场能显示并按下载量排序。发布包的 `repository` 字段必须指回本仓库
 （已是），映射由 registry 自动采集，条目里**不要**手写 `npm:` 键——校验会拒绝。
 
-当前状态：`@biliye/dsh-voice-call@0.2.1` 已发布；registry 中 `repository` / tarball / maintainer 已核对；
+当前状态：`@biliye/dsh-voice-call@0.2.2` 已发布；registry 中 `repository` / tarball / maintainer 已核对；
 三条安装路径（npm / release tarball / github 源码）都实测过——`dsh plugin --profile <p> add <spec>`
 会装包并自动挂进 `dsh.profile.bundles`，`dsh --profile <p> --dump-config` 输出 `- id: voice-call`。
+
+0.2.2 的内容：专属会话无法加载的两处修复（notice 消息 source 契约、`sessionPersistence` 快照形状，
+见 `FIX-2026-09-12.md`）＋ 播报链路剔除 `Route: …` 等元信息行（此前闲聊回复会把路由声明念出来）。
+⚠ release tarball 仍停在 0.2.1：GitHub 侧需要推 `v0.2.2` tag（本机 `git push` 到 github.com 不通，
+见下方传输提示），推完 `releases/latest/download/dsh-voice-call.tgz` 才是 0.2.2。
 
 ### 能用的凭据长什么样（本机踩坑的全部结论）
 
@@ -128,7 +133,7 @@ curl -s -H "Authorization: Bearer <session-token>" https://registry.npmjs.org/-/
 ```sh
 npm login --registry=https://registry.npmjs.org/   # publishConfig 管不到「登录」这一步
 npm publish                                        # 走 publishConfig.registry，不受本机 registry 影响
-npm view @biliye/dsh-voice-call version            # 期望 0.2.1
+npm view @biliye/dsh-voice-call version            # 期望 0.2.2
 ```
 
 > 其它仍然成立的坑：

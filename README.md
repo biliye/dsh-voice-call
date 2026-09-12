@@ -26,7 +26,7 @@ DSH Web GUI 的个人语音通话助手插件：悬浮球通话面板、FunASR �
 三条都可用（均已在 2026-09-12 实测；推荐 ① / ②，都不依赖 GitHub 连通性）：
 
 ```bash
-# ① npm（已发布 0.2.1；走 npm registry，可配国内镜像，不依赖 GitHub）
+# ① npm（已发布 0.2.2；走 npm registry，可配国内镜像，不依赖 GitHub）
 dsh plugin --profile web add @biliye/dsh-voice-call
 
 # ② 预构建 tarball（不必拉取整仓 git 历史，也没有需要授权的 build 脚本）
