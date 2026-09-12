@@ -16,3 +16,5 @@ fun/
 
 
 .vs/
+# vision router 工具产物（截图裁剪等），不进仓库
+.dsh-vision-router/
