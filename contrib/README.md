@@ -92,47 +92,61 @@ CI 还会跑 `awesome-lint` 与站点构建（双语一致性、分隔符等）�
   市场用 `includePrerelease: true` 求值，所以这个范围能匹配 `0.1.5-rc.1` 这类预发布版本；
   但声明错误会让用户在「只显示兼容插件」的筛选下看不到本插件，所以在验证之前不要写。
 
-## 可选：发布 npm（纯增益，与收录无关）
+## npm 发布（2026-09-12 已完成：0.2.1）
 
-收录不要求 npm；发布了只是让市场能显示并按下载量排序。发布包的 `repository` 字段必须指回本仓库
+收录不要求 npm；发布只是让市场能显示并按下载量排序。发布包的 `repository` 字段必须指回本仓库
 （已是），映射由 registry 自动采集，条目里**不要**手写 `npm:` 键——校验会拒绝。
 
+当前状态：`@biliye/dsh-voice-call@0.2.1` 已发布；registry 中 `repository` / tarball / maintainer 已核对；
+三条安装路径（npm / release tarball / github 源码）都实测过——`dsh plugin --profile <p> add <spec>`
+会装包并自动挂进 `dsh.profile.bundles`，`dsh --profile <p> --dump-config` 输出 `- id: voice-call`。
+
+### 能用的凭据长什么样（本机踩坑的全部结论）
+
+npm 现在**强制要求发布凭据具备 2FA 能力**：会话凭据（`npm login`）发布时报
+`403 Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages`，
+而当时账号是 `tfa: false`（没开 2FA，也就产不出 OTP）。所以本机只能走 granular token 路线，
+它必须四项同时正确，**缺任何一项都以误导性 404 的形式失败**：
+
+| 项 | 正确值 | 缺了会怎样 |
+|---|---|---|
+| Permissions | **Read and write (publish and stage)** | 选 `stage only` 只能暂存发布，直接 `npm publish` 会被拒 |
+| **Packages and scopes** | **选中 `@biliye` 这个 scope**（或 `All packages`） | **本次根因**：只勾了 "Only select packages and scopes" 却没真正选中对象，registry 记成 `scopes: [{"name": null, "type": "package"}]`，授权覆盖 0 个包，PUT 被掩码成 `E404 … '@biliye/dsh-voice-call@0.2.1' is not in this registry` |
+| Bypass 2FA | **勾上** | 退回上面那条 403 |
+| Expiration | 未过期 | 过期后凭据失效（401） |
+
+想确认自己那颗 token 的真实配置（比看 UI 可靠得多）：
+
 ```sh
-npm login --registry=https://registry.npmjs.org/   # 必须显式指定：本机默认 registry 是镜像
-npm publish                                        # 走 publishConfig.registry，不受本机 registry 影响
+# 用一颗能读账号信息的凭据（会话 token）列 token 元数据
+curl -s -H "Authorization: Bearer <session-token>" https://registry.npmjs.org/-/npm/v1/tokens
+# 期望 scopes 形如 [{"name":"@biliye","type":"package"}]，而不是 [{"name":null,...}]
 ```
 
-> ⚠️ 踩坑记录（本机 2026-09-12，两关都过了才算发布成功）：
->
-> **第一关：发到了只读镜像。** `C:\Users\123\.npmrc` 里 `registry=https://registry.npmmirror.com`，
-> 而 npmmirror 是只读镜像、不能发布。当时 `npm publish --access public` 把包打好了
-> （`@biliye/dsh-voice-call@0.2.1`，42.9 kB）却在最后一步中止：
-> `ENEEDAUTH: This command requires you to be logged in to https://registry.npmmirror.com`
-> ——一个字节都没上传，两个 registry 上都是 404。为此 `package.json` 已固定
-> `publishConfig.registry = https://registry.npmjs.org/`；但**登录**那一步 `publishConfig` 管不到，
-> 仍要显式带 `--registry`。
->
-> **第二关：2FA。** 换到官方 registry 且登录成功后，`npm publish` 仍被拒：
-> `403 Forbidden - PUT https://registry.npmjs.org/@biliye%2fdsh-voice-call - Two-factor authentication
-> or granular access token with bypass 2fa enabled is required to publish packages.`
-> （账号开了 2FA，`npm login` 的凭据发布时要再验一次；npm 10.7 在这种情况不会弹交互提示。）
-> 两条出路：
-> 1. 带一次性验证码发布：`npm publish --otp=123456`（验证器里的 6 位码，用完即弃）。
-> 2. 一劳永逸：在 https://www.npmjs.com/settings/~/tokens 建 **Granular Access Token**，
->    Packages and scopes 选 `@biliye` 的 read and write，并勾上 **Bypass 2FA**，
->    写入 `~/.npmrc` 的 `//registry.npmjs.org/:_authToken=...`。
->    **不要写进项目里的 `.npmrc`**——`.gitignore` 已排除 `.npmrc`，就是防这一下。
->
-> 另：`npm warn publish Removed invalid "scripts"` 是 npm 10.7 的噪音——本清单没有 `scripts` 字段，
-> `npm pkg fix` 在副本上跑也是零差异，可以忽略。
+### 本机发布步骤
 
-> 另外两点：
-> - scoped 包要求 `@biliye` 这个 scope 归你——npm 用户名就是 `biliye`，或你已创建 `biliye` org；
->   否则要改包名（`package.json` 的 `name` 与 `cordis.patch.yml` 的 row `name` 必须同步改，两者必须一致）。
->   实测那次 403 报的是 2FA 而不是 scope 无权限，说明 scope 这一关大概率是过的。
+```sh
+npm login --registry=https://registry.npmjs.org/   # publishConfig 管不到「登录」这一步
+npm publish                                        # 走 publishConfig.registry，不受本机 registry 影响
+npm view @biliye/dsh-voice-call version            # 期望 0.2.1
+```
+
+> 其它仍然成立的坑：
+> - `C:\Users\123\.npmrc` 里 `registry=https://registry.npmmirror.com`，而 **npmmirror 是只读镜像、不能发布**：
+>   第一次 `npm publish` 报了 `ENEEDAUTH … registry.npmmirror.com`，包打好了却一个字节没上传。
+>   为此 `package.json` 固定了 `publishConfig.registry = https://registry.npmjs.org/`。
+> - `npm warn publish Removed invalid "scripts"` 是 npm 10.7 的噪音：本清单没有 `scripts` 字段，
+>   `npm pkg fix` 在副本上跑也是零差异，忽略即可。
 > - npm 站内**搜索索引有延迟**（几分钟到数小时）。验证请用
->   `https://www.npmjs.com/package/@biliye/dsh-voice-call` 或 `npm view @biliye/dsh-voice-call`，
->   搜不到 ≠ 没发上去。
+>   `https://www.npmjs.com/package/@biliye/dsh-voice-call` 或 `npm view`，搜不到 ≠ 没发上去。
 
-发布后 ① 号安装方式（`dsh plugin --profile web add @biliye/dsh-voice-call`）才成立，见根 README 的
-「📦 安装」。
+### 后续发版：改用 OIDC 可信发布（不再需要 token / OTP）
+
+`.github/workflows/publish-npm.yml` 已就位：push `v*` tag 时由 GitHub runner 以 OIDC 发布，
+本机代理中间人、npmmirror、2FA 这些问题全部绕开（npm 的 token 页面本身也建议自动化改用 Trusted Publishing）。
+
+只需一次性配置：<https://www.npmjs.com/package/@biliye/dsh-voice-call/access> → **Trusted Publishers**
+→ Add → Publisher 选 **GitHub Actions**，依次填 `biliye` / `dsh-voice-call` / `publish-npm.yml`（Environment 留空）。
+
+之后发版：改 `package.json` 的 `version` → `git tag vX.Y.Z && git push origin vX.Y.Z`。
+**必须先改版本号**，否则 npm 会以「该版本已存在」拒绝；配置生效前该 workflow 会失败，属预期。

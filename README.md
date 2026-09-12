@@ -23,18 +23,18 @@ DSH Web GUI 的个人语音通话助手插件：悬浮球通话面板、FunASR �
 
 一条命令即可，**不需要手工编辑 `~/.dsh/profiles/web/package.json`**：本插件的 `package.json` 声明了 `dsh.bundle`，`dsh plugin add` 在 pnpm 装完后会把依赖自动追加到 profile 的 `dsh.profile.bundles` 层。
 
-按可用性排列（当前 ③ 立即可用，② 打首个 release tag 后可用，① 发布 npm 后可用）：
+三条都可用（均已在 2026-09-12 实测；推荐 ① / ②，都不依赖 GitHub 连通性）：
 
 ```bash
-# ③ GitHub 源码直装（现在就能用；无需 token，但依赖 GitHub 连通性）
-dsh plugin --profile web add github:biliye/dsh-voice-call
+# ① npm（已发布 0.2.1；走 npm registry，可配国内镜像，不依赖 GitHub）
+dsh plugin --profile web add @biliye/dsh-voice-call
 
-# ② 预构建 tarball（最快：不必拉取整仓 git 历史，也没有需要授权的 build 脚本）
-#    push 一个 v* tag 后由 .github/workflows/release.yml 自动产出该附件
+# ② 预构建 tarball（不必拉取整仓 git 历史，也没有需要授权的 build 脚本）
+#    每个 v* tag 由 .github/workflows/release.yml 自动产出该附件
 dsh plugin --profile web add "https://github.com/biliye/dsh-voice-call/releases/latest/download/dsh-voice-call.tgz"
 
-# ① npm（作者执行 npm publish --access public 后可用；走 npm registry，可配国内镜像）
-dsh plugin --profile web add @biliye/dsh-voice-call
+# ③ GitHub 源码直装（依赖 GitHub 连通性，国内可能需要代理）
+dsh plugin --profile web add github:biliye/dsh-voice-call
 ```
 
 装完重启 DSH（本次改动在 Host 半）：`dsh plugin` 只装包，不会替你重启。

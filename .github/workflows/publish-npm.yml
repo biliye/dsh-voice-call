@@ -1,0 +1,44 @@
+# Publishes the plugin to npm with OIDC trusted publishing — no token, no OTP.
+#
+# Why this exists: publishing from the local machine fights a MITM proxy, a
+# read-only npmmirror default registry and npm's 2FA requirement. GitHub's
+# runners have none of those, so a tag push does the release.
+#
+# One-time setup on npmjs (required before this workflow can succeed):
+#   https://www.npmjs.com/package/@biliye/dsh-voice-call/access
+#   -> Trusted Publishers -> Add -> Publisher: GitHub Actions
+#   -> Organization or user: biliye
+#      Repository: dsh-voice-call
+#      Workflow filename: publish-npm.yml
+#      Environment: (leave empty)
+#
+# Release procedure: bump "version" in package.json, commit, then
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+# Tagging without bumping fails with "cannot publish over the previously
+# published version" — that is npm protecting the existing release, not a bug.
+#
+# `npx -y npm@latest` is deliberate: the npm bundled with setup-node can be too
+# old to speak OIDC (needs npm >= 11.5.1 / Node >= 22.14).
+name: publish-npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Publish with provenance
+        run: npx -y npm@latest publish --provenance --access public
