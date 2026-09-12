@@ -9,6 +9,8 @@ node_modules/
 *.key
 *.pem
 .env
+# npm 凭据常写在项目级 .npmrc 的 _authToken 里，永不入库
+.npmrc
 
 fun/
 

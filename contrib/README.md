@@ -102,17 +102,34 @@ npm login --registry=https://registry.npmjs.org/   # 必须显式指定：本机
 npm publish                                        # 走 publishConfig.registry，不受本机 registry 影响
 ```
 
-> ⚠️ 本机踩坑记录（2026-09-12）：`C:\Users\123\.npmrc` 里 `registry=https://registry.npmmirror.com`，
-> 而 **npmmirror 是只读镜像、不能发布**。当时 `npm publish --access public` 把包打好了
+> ⚠️ 踩坑记录（本机 2026-09-12，两关都过了才算发布成功）：
+>
+> **第一关：发到了只读镜像。** `C:\Users\123\.npmrc` 里 `registry=https://registry.npmmirror.com`，
+> 而 npmmirror 是只读镜像、不能发布。当时 `npm publish --access public` 把包打好了
 > （`@biliye/dsh-voice-call@0.2.1`，42.9 kB）却在最后一步中止：
 > `ENEEDAUTH: This command requires you to be logged in to https://registry.npmmirror.com`
-> ——一个字节都没上传，`registry.npmjs.org` 与 npmmirror 上都是 404。为此 `package.json` 已固定
+> ——一个字节都没上传，两个 registry 上都是 404。为此 `package.json` 已固定
 > `publishConfig.registry = https://registry.npmjs.org/`；但**登录**那一步 `publishConfig` 管不到，
-> 仍要显式带 `--registry`，或在 `~/.npmrc` 写 `//registry.npmjs.org/:_authToken=...`。
+> 仍要显式带 `--registry`。
+>
+> **第二关：2FA。** 换到官方 registry 且登录成功后，`npm publish` 仍被拒：
+> `403 Forbidden - PUT https://registry.npmjs.org/@biliye%2fdsh-voice-call - Two-factor authentication
+> or granular access token with bypass 2fa enabled is required to publish packages.`
+> （账号开了 2FA，`npm login` 的凭据发布时要再验一次；npm 10.7 在这种情况不会弹交互提示。）
+> 两条出路：
+> 1. 带一次性验证码发布：`npm publish --otp=123456`（验证器里的 6 位码，用完即弃）。
+> 2. 一劳永逸：在 https://www.npmjs.com/settings/~/tokens 建 **Granular Access Token**，
+>    Packages and scopes 选 `@biliye` 的 read and write，并勾上 **Bypass 2FA**，
+>    写入 `~/.npmrc` 的 `//registry.npmjs.org/:_authToken=...`。
+>    **不要写进项目里的 `.npmrc`**——`.gitignore` 已排除 `.npmrc`，就是防这一下。
+>
+> 另：`npm warn publish Removed invalid "scripts"` 是 npm 10.7 的噪音——本清单没有 `scripts` 字段，
+> `npm pkg fix` 在副本上跑也是零差异，可以忽略。
 
 > 另外两点：
 > - scoped 包要求 `@biliye` 这个 scope 归你——npm 用户名就是 `biliye`，或你已创建 `biliye` org；
 >   否则要改包名（`package.json` 的 `name` 与 `cordis.patch.yml` 的 row `name` 必须同步改，两者必须一致）。
+>   实测那次 403 报的是 2FA 而不是 scope 无权限，说明 scope 这一关大概率是过的。
 > - npm 站内**搜索索引有延迟**（几分钟到数小时）。验证请用
 >   `https://www.npmjs.com/package/@biliye/dsh-voice-call` 或 `npm view @biliye/dsh-voice-call`，
 >   搜不到 ≠ 没发上去。
