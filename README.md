@@ -21,22 +21,48 @@ DSH Web GUI 的个人语音通话助手插件：悬浮球通话面板、FunASR �
 
 ## 📦 安装（持久化）
 
-本插件是持久插件，重启 DSH 后仍在「设置 → 插件」中可见。
+一条命令即可，**不需要手工编辑 `~/.dsh/profiles/web/package.json`**：本插件的 `package.json` 声明了 `dsh.bundle`，`dsh plugin add` 在 pnpm 装完后会把依赖自动追加到 profile 的 `dsh.profile.bundles` 层。
+
+按可用性排列（当前 ③ 立即可用，② 打首个 release tag 后可用，① 发布 npm 后可用）：
 
 ```bash
-# 1. 克隆或放置源码目录
-git clone https://github.com/biliye/dsh-voice-call.git ~/.dsh/voice-call-plugin
+# ③ GitHub 源码直装（现在就能用；无需 token，但依赖 GitHub 连通性）
+dsh plugin --profile web add github:biliye/dsh-voice-call
 
-# 2. 在 web profile 中安装（file: 依赖 + bundles 挂载）
-#    在 ~/.dsh/profiles/web/package.json 添加：
-#    依赖: "@biliye/dsh-voice-call": "file:../../voice-call-plugin"
-#    bundles 追加: "@biliye/dsh-voice-call"
-cd ~/.dsh/profiles/web && pnpm install
+# ② 预构建 tarball（最快：不必拉取整仓 git 历史，也没有需要授权的 build 脚本）
+#    push 一个 v* tag 后由 .github/workflows/release.yml 自动产出该附件
+dsh plugin --profile web add "https://github.com/biliye/dsh-voice-call/releases/latest/download/dsh-voice-call.tgz"
 
-# 3. 重启 DSH
+# ① npm（作者执行 npm publish --access public 后可用；走 npm registry，可配国内镜像）
+dsh plugin --profile web add @biliye/dsh-voice-call
 ```
 
-安装后验证：`dsh --profile web --dump-config | grep voice-call` 应输出 `- id: voice-call`。
+装完重启 DSH（本次改动在 Host 半）：`dsh plugin` 只装包，不会替你重启。
+
+```bash
+dsh --profile web --dump-config | grep voice-call        # 应输出 - id: voice-call
+dsh --profile web --dump-config | Select-String voice-call   # Windows PowerShell
+```
+
+> 收录进插件市场后，用户也可以在「设置 → 插件市场」里搜索 `dsh-voice-call` 一键安装（安装来源同上，优先用 tarball）。投稿入口与步骤见 [`contrib/README.md`](contrib/README.md)。
+
+### 本地开发安装
+
+源码就在本机时直接用路径安装（pnpm 软链目录，改 `lib/client.js` 刷新浏览器即生效，改 `lib/index.js` 需重启 DSH）：
+
+```bash
+cd /path/to/dsh-voice-call
+dsh plugin --profile web add .        # 相对路径按当前目录解析，不会误链到 profile 自身
+```
+
+### 升级 / 卸载
+
+```bash
+dsh plugin --profile web update @biliye/dsh-voice-call    # 或 github:biliye/dsh-voice-call / tarball 地址
+dsh plugin --profile web remove @biliye/dsh-voice-call
+```
+
+> 旧的手工安装方式（克隆到 `~/.dsh/voice-call-plugin`、手写 `file:` 依赖 + `bundles` 条目、再 `cd ~/.dsh/profiles/web && pnpm install`）已不再需要，也不再写进本文档：那三步里唯一真正必要的是 pnpm 装包，而 `dsh plugin add` 已经把它和 bundles 挂载一起做了。已在用旧方式安装的机器无需迁移，`dsh plugin --profile web update @biliye/dsh-voice-call` 即可切到新来源。
 
 ## 🚀 使用
 
@@ -65,6 +91,7 @@ cd ~/.dsh/profiles/web && pnpm install
 
 - `FIX-2026-09-08.md`：任务生命周期修复档案（任务完成不播报 / 状态卡死 / 无法停止 / 任务会话无法完整打开）——含根因分析、修复内容、验证记录与维护注意事项。后续涉及任务分发/停止/会话模型或 DSH 运行时 Session API 升级时，先读该档案。
 - `FIX-2026-09-09.md`：其他会话完成播报改造为「合并进主会话」后的修复档案（唤醒词休眠误跳过 / 任务结果截断与转述指令 / 多窗口双播排查）。涉及播报链路、唤醒词模式、多标签播报时先读该档案。
+- `contrib/README.md`：发行与收录档案——投稿到 awesome-dsh-plugin 精选列表（＝插件市场的唯一数据源）的条目文件、收录条件核对、tarball 链接防失效规则，以及 npm 发布与 `engines.dsh` 的可选项。改安装来源、发新版或补录 npm 之前先读该文件。
 
 ## 🏗 架构
 

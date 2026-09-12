@@ -1,0 +1,38 @@
+# Attaches a prebuilt install tarball to every v* GitHub Release.
+#
+# Why: `dsh plugin --profile web add <https://...tgz>` skips the repository
+# clone and any build/`allowBuilds` approval, so it installs in seconds and
+# works where GitHub source fetching is slow. The asset is deliberately named
+# `dsh-voice-call.tgz` (no version in the name) so
+# `releases/latest/download/dsh-voice-call.tgz` never rots after a new tag.
+#
+# There is no build step: lib/*.js is committed, and `npm pack` honours the
+# `files` field (lib + cordis.patch.yml, plus README/LICENSE/package.json).
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  tarball:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Pack the plugin
+        run: |
+          npm pack
+          mv biliye-dsh-voice-call-*.tgz dsh-voice-call.tgz
+      - name: Attach the tarball to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes || true
+          gh release upload "${GITHUB_REF_NAME}" dsh-voice-call.tgz --clobber

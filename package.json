@@ -26,10 +26,31 @@
     "lib",
     "cordis.patch.yml"
   ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "voice",
+    "speech-recognition",
+    "text-to-speech",
+    "wake-word",
+    "voice-assistant",
+    "funasr"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/biliye/dsh-voice-call.git"
+  },
+  "homepage": "https://github.com/biliye/dsh-voice-call#readme",
+  "bugs": {
+    "url": "https://github.com/biliye/dsh-voice-call/issues"
   },
   "peerDependencies": {
     "react": "^18.2.0",
