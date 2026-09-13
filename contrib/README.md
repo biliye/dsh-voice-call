@@ -60,8 +60,12 @@ curl -sI https://github.com/biliye/dsh-voice-call/releases/latest/download/dsh-v
 >   `SSL certificate problem: unable to get local issuer certificate`；`-c` 覆盖一次即可，或
 >   `git config http.sslBackend schannel` 固化。推送身份用 Windows 凭据管理器里已存的
 >   `git:https://github.com`，不需要 token。代理地址来自 `~/.gitconfig` 的 `http.proxy=127.0.0.1:26561`。
-> - 代理未开时的旧结论（仍成立）：`api.github.com`、`codeload.github.com` 可直连；`github.com`
->   直连超时或 TLS 失败。此时走 **GitHub REST API** 路线（token 需 `repo` + `workflow` 权限）：把本地
+> - **2026-09-13 复测（代理已关闭）**：直连也能推，但必须**同时**绕开 `.gitconfig` 里那个已失效的代理
+>   并保持 schannel：`git -c http.proxy= -c http.sslBackend=schannel push origin main`。三者缺一都会失败：
+>   只 `-c http.proxy=` 而用 openssl → `SSL certificate problem`；只换 schannel 而代理没开 → 卡在
+>   `Failed to connect to 127.0.0.1 port 26561`。所以两条路任一可用：**代理开着 → schannel**；
+>   **代理关着 → `http.proxy=` + schannel**。
+> - 兜底（上面两条都不通时）：走 **GitHub REST API** 路线（token 需 `repo` + `workflow` 权限）：把本地
 >   提交逐字节复刻成远端提交（往返校验 tree/commit SHA 与本地一致），再创建 tag/Release，脚本在
 >   `.debug/gh-publish.mjs`（`.debug/` 已 gitignore，不入库）。注意该脚本的 `push` 阶段**一次只复刻
 >   HEAD 一个提交**，本地领先远端多个提交时会以 `remote main is not the local parent` 拒绝执行。
