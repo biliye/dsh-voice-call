@@ -9,6 +9,55 @@
 市场与 [dshmarket.com](https://dshmarket.com)、[awesome-dsh-plugin.com](https://awesome-dsh-plugin.com)
 共用同一份数据，所以收录一次，三处同时可见。
 
+## 现状：已收录（2026-09-13 合并）
+
+投稿已完成，**不需要再开 PR**：
+
+| 项 | 值 |
+|---|---|
+| PR | [`awesome-dsh-plugin#4938`](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4938)「Add biliye/dsh-voice-call (voice)」 |
+| 提交 → 合并 | 2026-09-12T14:02:31Z → **2026-09-13T02:56:53Z，由维护者 `fkysly` 合并**（merge commit `0237826`） |
+| 条目文件 | `data/plugins/biliye__dsh-voice-call.yml`（blob `c86e356`，915 字节，与 `contrib/biliye__dsh-voice-call.yml` 一致） |
+| 分类 | `voice`（Voice & Audio） |
+| tarball | `releases/latest/download/dsh-voice-call.tgz` → release `v0.2.2`，附件 44263B，已下载 17 次 |
+
+核对方式（只读，无需登录）：
+
+```sh
+curl -s https://api.github.com/repos/awesome-dsh-plugin/awesome-dsh-plugin/pulls/4938 | grep '"merged"'
+curl -s -o /dev/null -w '%{http_code}\n' \
+  https://raw.githubusercontent.com/awesome-dsh-plugin/awesome-dsh-plugin/main/data/plugins/biliye__dsh-voice-call.yml
+# 期望 200
+```
+
+### ⚠ 下载区域 = `china` 时市场看不到本插件（快照滞后，不是掉收录）
+
+市场的目录源按**下载区域**分流（`dshmarket/src/regions.ts` 的 `ROUTES`）：
+
+| 区域 | 目录源顺序 |
+|---|---|
+| `global` | 官网 `https://awesome-dsh-plugin.com/plugins.json` |
+| `china` | ① npm 镜像上的 `dsh-plugin-catalog` 包 → ② 官网 URL（**仅在 ① 失败时**才用） |
+
+`china` 的 ① 是**主源、不是兜底**：`registry.ts` 的 `loadRegistry()` 第一个成功的源就直接返回，所以镜像只要答得出来，就永远不会回退到官网。
+
+而 `dsh-plugin-catalog` **只在夜间 cron（`23 2 * * *` UTC）或手动 dispatch 时发布**（`build-site.yml` 的 `publish the catalog to npm` 带 `if: schedule || workflow_dispatch`）；push 构建只部署官网、**不发**目录包。因此：
+
+- 合并时 npm 上最新为 `dsh-plugin-catalog@2026.912.3199`（构建号 = workflow run number），**3561 条**，发布于 **2026-09-12T09:00:43Z**；
+- 本条目 **2026-09-13T02:56:53Z** 才合并，比那份快照晚约 18 小时 → 快照里没有它；
+- 官网由**每次 push** 的站点构建刷新（09-13T07:49Z 那轮已在合并之后），所以 `global` 区域当时即可见。
+
+**结论：收录没有失败，是区域目录快照滞后。** 当天夜间构建 run `34745441479`（09-13T07:31:24Z 启动，run_number 3281）跑完并发布 `2026.913.3281` 后，`china` 区域即可见。
+
+想立刻看到，三选一：
+
+1. 市场「设置 → 下载区域」切成 `global`（走官网 URL；需要能连上 awesome-dsh-plugin.com）；
+2. 环境变量 `DSHM_REGISTRY_URL=https://awesome-dsh-plugin.com/plugins.json`（在 `routesFor()` 里是**替换**整份源列表，不是插队）；
+3. 等夜间构建发布新目录包后重启 DSH。
+
+> 目录包版本可自证：`npm view dsh-plugin-catalog version --registry=https://registry.npmjs.org/`
+> —— 出现 `2026.913.*` 即表示本条目已进入中国区所读的那份目录。
+
 ## 投稿前：先让 tarball 链接可用（否则先删掉 yml 里那行）
 
 **顺序不能反**：workflow 只有在被打 tag 的那个提交里存在才会运行，所以先把本次改动（根 README、
@@ -86,8 +135,10 @@ CI 还会跑 `awesome-lint` 与站点构建（双语一致性、分隔符等）�
 
 ## 收录后会发生什么
 
-- 合并后夜间构建刷新 `plugins.json`，**通常一天内**出现在市场 Discover 页、`dshmarket.com` 与
-  awesome-dsh-plugin.com 的 `voice` 分类，以及每张卡片对应的 GitHub Discussions 讨论帖。
+- **每次 push** 的站点构建都会刷新官网 `plugins.json`，`awesome-dsh-plugin.com` / `dshmarket.com`
+  与 `voice` 分类随之更新；但 npm 上的 `dsh-plugin-catalog` 快照**只随夜间构建发布**，而
+  **下载区域 = `china` 的市场读的正是这份快照**（见上节），所以中国区最多要等到当天夜间构建之后。
+  合并后还会为卡片生成 GitHub Discussions 讨论帖。
 - 市场用户看到的是一个**一键安装**按钮，安装来源即条目里的 `tarball`（无则回退源码构建）。
 - dsh-market 卡片的「宿主兼容」标记只在 npm manifest 里读 `engines.dsh` 或 lockstep
   `@deepseek-ai/dsh-*` peer；本仓库目前两者都没声明，因此显示为「未声明」——**不声明不会被隐藏，
@@ -158,8 +209,14 @@ npm view @biliye/dsh-voice-call version            # 期望 0.2.2
 >   为此 `package.json` 固定了 `publishConfig.registry = https://registry.npmjs.org/`。
 > - `npm warn publish Removed invalid "scripts"` 是 npm 10.7 的噪音：本清单没有 `scripts` 字段，
 >   `npm pkg fix` 在副本上跑也是零差异，忽略即可。
-> - npm 站内**搜索索引有延迟**（几分钟到数小时）。验证请用
->   `https://www.npmjs.com/package/@biliye/dsh-voice-call` 或 `npm view`，搜不到 ≠ 没发上去。
+> - npm 站内搜索**基本搜不到本包**，这是排序问题、不是发布问题：搜索索引给
+>   `@biliye/dsh-voice-call` 的 `final` 评分是 `0`（月下载量 0），而 `text=dsh-voice-call`
+>   命中 23 万条；更巧的是 npm 上有一个**同名、无 scope 的**
+>   [`dsh-voice-call`](https://www.npmjs.com/package/dsh-voice-call)（作者 `pandapolo`，
+>   `dsh-voice` 的 fork），按名字搜先出来的是**别人的插件**。验证一律用
+>   `https://www.npmjs.com/package/@biliye/dsh-voice-call` 或
+>   `npm view @biliye/dsh-voice-call version --registry=https://registry.npmjs.org/`（期望 `0.2.2`）；
+>   搜 `biliye` 能且仅能命中本包。另注意 `registry.npmmirror.com` 只同步到 `0.2.1`。
 
 ### 后续发版：改用 OIDC 可信发布（不再需要 token / OTP）
 
