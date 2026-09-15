@@ -158,8 +158,7 @@ dsh plugin --profile web remove @biliye/dsh-voice-call
 
 ### 🛠 维护参考
 
-- `FIX-2026-09-08.md`：任务生命周期修复档案（任务完成不播报 / 状态卡死 / 无法停止 / 任务会话无法完整打开）——含根因分析、修复内容、验证记录与维护注意事项。后续涉及任务分发/停止/会话模型或 DSH 运行时 Session API 升级时，先读该档案。
-- `FIX-2026-09-09.md`：其他会话完成播报改造为「合并进主会话」后的修复档案（唤醒词休眠误跳过 / 任务结果截断与转述指令 / 多窗口双播排查）。涉及播报链路、唤醒词模式、多标签播报时先读该档案。
+- **修复档案（已移出本仓库，不再上传 GitHub）**：`FIX-2026-09-08.md`（任务生命周期：任务完成不播报 / 状态卡死 / 无法停止 / 任务会话无法完整打开）与 `FIX-2026-09-09.md`（其他会话完成播报改造为「合并进主会话」：唤醒词休眠误跳过 / 任务结果截断与转述指令 / 多窗口双播排查）——两份都含根因分析、修复内容与维护注意事项。现保存在本机 `F:\xiangmu\update\dshCallUpdate\fix\`；后续涉及任务分发/停止/会话模型、DSH 运行时 Session API 升级、播报链路或唤醒词模式时，先读这两份档案。
 - `contrib/README.md`：发行与收录档案——投稿到 awesome-dsh-plugin 精选列表（＝插件市场的唯一数据源）的条目文件、收录条件核对、tarball 链接防失效规则，以及 npm 发布与 `engines.dsh` 的可选项。改安装来源、发新版或补录 npm 之前先读该文件。
 - **离线校验脚本**（在 `.debug/`，已 gitignore，不进 npm 包；改 TTS/朗读链路后先跑这两个）：
   - `node .debug/verify-mimo-tts.mjs`：MiMo 适配验证——导演指令块解析（含「解析失败必须跳过朗读」这条安全不变量）、语气/风格标签在各提供商下的保留与剥离、提示词按「提供商 × 导演模式」切换、文本准备链路（E 段：先分离指令块再压缩正文；含 2026-09-15 事故回归 E-6/E-7——客户端若自己折叠换行或提前截断，回复格式再正确也念不出来）、音色克隆样本解析（G 段：DataURL 编码与字节可还原、大小写扩展名、缺失/格式错/超 10MB 的报错、留空默认样音、缓存命中），以及用本地 mock 服务器核对真实请求形状（user=指令 / assistant=正文、认证头、audio 字段、voiceclone 的样本 DataURL）与 WAV/MP3 解码、错误路径。脚本直接抽取 `lib/index.js` 的真实源码求值，不复制被测逻辑。
@@ -171,21 +170,34 @@ dsh plugin --profile web remove @biliye/dsh-voice-call
 
 ```
 lib/
-├── index.js   # Host 半：专属工作区/会话自动创建(workspaceRegistry + agents.create/resume，
-│              # 固定 ID voice-call-main 跨重启保持)、任务分发(语音通话工作区下新建 va-task-*
-│              # 任务会话，上下文满自动续接新会话，监听进程定时巡检完成/失败并汇报主会话)、
-│              # 语音文本注入(agent.followup)、TTS/云端ASR 中转(subprocess node 桥，
-│              # payload 走 stdin 避免命令行长度限制)、TTS 多提供商(MiniMax t2a_v2 /
-│              # MiMo chat/completions 导演模式：指令→user、正文→assistant / OpenAI 兼容)、
-│              # 语气标记与导演指令块的解析与过滤、/api/voice-call/* 路由、
-│              # voice_task 动态工具、voiceAssistant 服务、session/event 监听
-└── client.js  # Client 半：悬浮球(shell.overlay slot)、通话面板、VAD 实时监听(ScriptProcessor
-               # RMS 能量检测 + 停顿分段)、FunASR HTTP 整段识别、TTS 播放防自听、
-               # TTS 设置(MiniMax / MiMo 预置音色 / OpenAI，导演模式三态与固定剧本)、
-               # 唤醒词通话模式(handleRecognizedText 统一入口：休眠/唤醒状态机、
-               # 唤醒词匹配与剥离、沉默超时自动休眠、可配置唤醒词/休眠时长)、
-               # localStorage 设置、专属工作区/会话状态轮询与「打开会话」
+├── index.js            # DSH 插件入口：只导出 name / inject / apply（薄入口，9 行）
+├── host/               # Host 半（在 DSH Node 进程里跑）
+│   ├── plugin.js       # 装配层：唯一接触 ctx 注册面的地方（on/effect/interval/setTimeout/provide/register）
+│   ├── config.js       # 插件身份、专属会话/工作区常量、快速回复提示词、语气规则、Route 元信息行剔除
+│   ├── http.js         # /api/voice-call/* 路径表 + writeJson / readJsonBody
+│   ├── state.js        # apply() 的共享可变状态（拆分前是 apply 的闭包变量）
+│   ├── messages.js     # 语音事件队列 + 插件消息 source 契约（ContextFormed）
+│   ├── session.js      # 专属工作区/会话的创建与 resume、人格注入、快速回复提示词
+│   ├── tasks.js        # 任务分发 / 巡检 / 上下文将满续接 / 完成·失败·停止结算
+│   ├── announce.js     # 其他会话与后台 job 完成的跟踪与语音播报
+│   ├── events.js       # session/event、agent/status 订阅 + 任务巡检 + jobs 监听
+│   ├── routes.js       # 14 条 HTTP 路由（只构造返回，注册交给装配层）
+│   ├── expose.js       # voice_task 动态工具 + voiceAssistant 只读服务
+│   └── speech/
+│       ├── bridge.js   # subprocess node 桥（payload 走 stdin）+ 各提供商子进程脚本
+│       ├── tone.js     # 语气标签 ⇄ 各 TTS 插件的插话/风格标签
+│       ├── director.js # 导演模式「指令 + --- + 正文」结构解析
+│       └── tts.js      # TTS 文本准备、请求、失败回退、发送记录、音色克隆样本
+└── client.js           # Client 半（浏览器 bundle：悬浮球 slot、通话面板、VAD、唤醒词、设置页）
 ```
+
+**分层规则**（完整设计与验收记录见仓库外的 `F:\xiangmu\update\dshCallUpdate\code-split-2026-09-15\`）：
+
+- 依赖只向上：`config/http/state` ← `messages/speech` ← `session/tasks` ← `announce` ← `events/routes/expose` ← `plugin.js` ← `index.js`。
+- `plugin.js` 是**唯一**调用 `ctx.on / effect / interval / setTimeout / provide / tools.register / webServer.register` 的地方——注册必须发生在 `apply()` 执行期间，否则停用插件时副作用会泄漏。
+- `state.js` 的每个字段只有一个模块负责写入（模块头注释里写明），其余模块只读。
+- **`client.js` 必须保持单文件预打包产物**（`window.__ModuleLoader__.load({id, factory})`），DSH 客户端加载器不接收多文件入口；因此 Client 半拆分需要构建步骤，本次未做。
+
 
 ### 设计要点
 

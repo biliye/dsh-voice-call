@@ -161,7 +161,8 @@ CI 还会跑 `awesome-lint` 与站点构建（双语一致性、分隔符等）�
 会装包并自动挂进 `dsh.profile.bundles`，`dsh --profile <p> --dump-config` 输出 `- id: voice-call`。
 
 0.2.2 的内容：专属会话无法加载的两处修复（notice 消息 source 契约、`sessionPersistence` 快照形状，
-见 `FIX-2026-09-12.md`）＋ 播报链路剔除 `Route: …` 等元信息行（此前闲聊回复会把路由声明念出来）。
+见修复档案 `F:\xiangmu\update\dshCallUpdate\fix\FIX-2026-09-12.md`——档案已移出仓库，不再随 GitHub 分发）
+＋ 播报链路剔除 `Route: …` 等元信息行（此前闲聊回复会把路由声明念出来）。
 
 发布状态：npm `0.2.2` 由本机 `npm publish` 发布；GitHub Release `v0.2.2` 由 tag 触发 `release.yml`
 产出，附件 `dsh-voice-call.tgz`（44263B，sha1 `d470207e9827c329b8392d862e01c6bc79587401`）与 npm
