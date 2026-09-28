@@ -151,22 +151,43 @@ CI 还会跑 `awesome-lint` 与站点构建（双语一致性、分隔符等）�
   市场用 `includePrerelease: true` 求值，所以这个范围能匹配 `0.1.5-rc.1` 这类预发布版本；
   但声明错误会让用户在「只显示兼容插件」的筛选下看不到本插件，所以在验证之前不要写。
 
-## npm 发布（2026-09-12：0.2.1 → 0.2.2 已发布）
+## npm 发布（2026-09-28：0.2.2 → 0.3.0 已发布）
 
 收录不要求 npm；发布只是让市场能显示并按下载量排序。发布包的 `repository` 字段必须指回本仓库
 （已是），映射由 registry 自动采集，条目里**不要**手写 `npm:` 键——校验会拒绝。
 
-当前状态：`@biliye/dsh-voice-call@0.2.2` 已发布；registry 中 `repository` / tarball / maintainer 已核对；
-三条安装路径（npm / release tarball / github 源码）都实测过——`dsh plugin --profile <p> add <spec>`
-会装包并自动挂进 `dsh.profile.bundles`，`dsh --profile <p> --dump-config` 输出 `- id: voice-call`。
+当前状态：`@biliye/dsh-voice-call@0.3.0` 已发布；三条安装路径（npm / release tarball / github 源码）
+都实测过——`dsh plugin --profile <p> add <spec>` 会装包并自动挂进 `dsh.profile.bundles`，
+`dsh --profile <p> --dump-config` 输出 `- id: voice-call`。
 
-0.2.2 的内容：专属会话无法加载的两处修复（notice 消息 source 契约、`sessionPersistence` 快照形状，
-见修复档案 `F:\xiangmu\update\dshCallUpdate\fix\FIX-2026-09-12.md`——档案已移出仓库，不再随 GitHub 分发）
-＋ 播报链路剔除 `Route: …` 等元信息行（此前闲聊回复会把路由声明念出来）。
+0.3.0 的内容：MiMo 导演模式与音色克隆（朗读文本准备收敛到 Host）、**Host 半拆分为 `lib/host/**`**
+（入口薄化到 9 行，行为零变化：167 条行为探针对照拆分前基线逐字一致）、**TTS 的 API Key 按提供商各存一份**
+（切换提供商不再需要重填，见修复档案 `F:\xiangmu\update\dshCallUpdate\fix\FIX-2026-09-15-TTS-Key.md`）、
+维护档案移出仓库。
 
-发布状态：npm `0.2.2` 由本机 `npm publish` 发布；GitHub Release `v0.2.2` 由 tag 触发 `release.yml`
-产出，附件 `dsh-voice-call.tgz`（44263B，sha1 `d470207e9827c329b8392d862e01c6bc79587401`）与 npm
-tarball 是**同一份字节**。三条安装路径（npm / `releases/latest/download` / github 源码）现在都是 0.2.2。
+发布状态（2026-09-28 实测）：
+
+- npm `0.3.0` 由本机 `npm publish` 发布；`dist.shasum` = `a51580ff7113b7170c0bdb066ba7258592cf0262`，
+  与本机 `npm pack` 产物一致（说明上线的是本机这一份）。
+- GitHub Release `v0.3.0` 由 tag 触发 `release.yml` 产出，附件 `dsh-voice-call.tgz`（69313B，
+  sha256 `7257ad5f915e469c3a135fc05bc2dfb0e9d883b96bc14b2c7da88df835711ef6`）。
+- ⚠ **npm publish 返回的是 HTTP 202，不是 201**：CLI 打印
+  `Your package is being processed and may take a few minutes to become available.` 后即退出 0，
+  **registry 要过几分钟才可见**（本次约 4 分钟）。这段时间内 `npm view` 仍显示旧版本、
+  版本文档返回 404——**不要据此判定失败或重发**（重复发同一版本会被 registry 拒绝）。
+- ⚠ 同一 tag 触发的 `publish-npm.yml`（OIDC）**这次没有发布**：轮询 160 秒 registry 仍停在 0.2.2，
+  且上线版本的 `dist.shasum` 等于本机 pack 的 sha1 → 成功的是本机那次，CI 那步没成。
+  OIDC 路线仍需 npmjs 上的一次性 Trusted Publisher 配置（见文末）。
+
+> ⚠ **0.3.0 起，"npm 包与 Release 包同一份字节"不再成立。**
+> 0.2.2 时它是成立的（本次复核：两边都是 44263B、sha1 `d470207e9827c329b8392d862e01c6bc79587401`）。
+> 0.3.0：npm 包 69485B / sha1 `a51580ff…`，Release 包 69313B / sha256 `7257ad5f…`。
+> 差异**100% 来自行尾**——把两边的 CRLF 都当成 LF 后逐文件 sha256 **完全一致**；
+> npm 包里 `lib/**` 是 CRLF（本机工作区如此；仓库 `core.autocrlf=true` 且这些文件在工作区是 CRLF），
+> Release 包由 Linux 检出（LF）打包。`lib/client.js` 在工作区本来就是 LF，所以它在两个包里字节相同。
+> 功能上等价（Node 两种行尾都正常），但会让"按哈希核对安装来源"失效。
+> 根治办法（**未执行，待决定**）：加 `.gitattributes` 固定换行（如 `* text=auto eol=lf` 或按类型指定）
+> 并 `git add --renormalize .`；这会产生一次全量换行变更，且**已发布的 0.3.0 无法追改**。
 
 ⚠ 同一个 tag 触发的 `publish-npm.yml` 这次是**失败**的 run：失败步骤是
 `npx -y npm@latest publish --provenance --access public`。两种预期原因之一，日志需登录 GitHub 才能看：
@@ -196,13 +217,24 @@ curl -s -H "Authorization: Bearer <session-token>" https://registry.npmjs.org/-/
 # 期望 scopes 形如 [{"name":"@biliye","type":"package"}]，而不是 [{"name":null,...}]
 ```
 
-### 本机发布步骤
+### 本机发布步骤（2026-09-28 实测更新）
 
 ```sh
 npm login --registry=https://registry.npmjs.org/   # publishConfig 管不到「登录」这一步
 npm publish                                        # 走 publishConfig.registry，不受本机 registry 影响
-npm view @biliye/dsh-voice-call version            # 期望 0.2.2
+# 看到 "Your package is being processed…" 是正常的：HTTP 202，等几分钟再核对
+npm view @biliye/dsh-voice-call version --registry=https://registry.npmjs.org/   # 期望 0.3.0
 ```
+
+> 本机 token 现状（2026-09-28 用上面那条 `GET /-/npm/v1/tokens` 核对）：`home-computer-token1` →
+> `permissions: [{"name":"package","action":"write"}]`、`scopes: [{"name":"@biliye","type":"package"}]`、
+> `bypass_2fa: true`、到期 `2026-12-11`。四项齐全，用它发布可行（旧的 `home-computer-token` 的
+> `scopes` 是 `[{"name":null}]`，就是当初那个"授权覆盖 0 个包"的坏 token，别再用了）。
+>
+> 平台新政策（下次发版前读一遍，都会影响这条链路）：5/22 **暂存发布 GA**（发布可能进入需人工 2FA
+> 批准的队列）、7/31 **限制 bypass-2FA 令牌**做敏感操作并预告"将失去直接发布能力"（目标 2027-01）、
+> 9/18 新增 **stage-only 令牌**类型、7/28 发布期恶意扫描（这正是 202 异步处理的一部分）。
+> **长久解仍是配好 Trusted Publisher**，让 CI 走 OIDC。
 
 > 其它仍然成立的坑：
 > - `C:\Users\123\.npmrc` 里 `registry=https://registry.npmmirror.com`，而 **npmmirror 是只读镜像、不能发布**：
