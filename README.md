@@ -2,7 +2,7 @@
 
 DSH 桌面端与 Web GUI 的个人语音通话助手插件：悬浮球通话面板、本地 SenseVoice / FunASR 语音识别、云端 TTS 语音回复、子代理任务分发与进度跟踪。
 
-> **支持的 DSH 端**：**桌面端（DSH 桌面应用，profile 名 `desktop`）** 与 **Web 端（`dsh web`，profile 名 `web`）** 用的是同一套插件机制，本插件两边的 Host / Client 代码完全一致——下面所有命令把 `--profile web` 换成 `--profile desktop` 即可（不确定自己的 profile 名时，看 `~/.dsh/profiles/` 下的目录名，或 `dsh --help` 里的默认 profile）。本机实测：桌面端与 Web 端各有一份 profile，同一份源码用 junction 挂进两边的 `node_modules`，插件列表里都能看到「voice-call」。
+> **支持的 DSH 端**：**桌面端（DSH 桌面应用，profile 名 `desktop`）** 与 **Web 端（`dsh web`，profile 名 `web`）** 用的是同一套插件机制，本插件两边的 Host / Client 代码完全一致——下面所有命令把 `--profile web` 换成 `--profile desktop` 即可（不确定自己的 profile 名时，看 `~/.dsh/profiles/` 下的目录名，或 `dsh --help` 里的默认 profile）。本机实测：桌面端与 Web 端各有一份 profile，同一份源码用 junction 挂进两边的 `node_modules`，两边的 `dsh.profile.bundles` 里都有本插件；**桌面端运行时** `GET /api/voice-call/state` 返回 `ready: true`（插件在桌面端加载正常）。
 
 ## ✨ 功能
 
