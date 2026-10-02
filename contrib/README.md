@@ -11,15 +11,15 @@
 
 ## 现状：已收录（2026-09-13 合并）
 
-投稿已完成，**不需要再开 PR**：
+首次投稿已完成，**不是为了收录就不需要再开 PR**；但**条目内容要更新（描述、tarball 指向、兼容性说明）必须新开一个 PR**——市场卡片读的就是这份条目文件，见文末「0.4.0 条目更新」。
 
 | 项 | 值 |
 |---|---|
 | PR | [`awesome-dsh-plugin#4938`](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4938)「Add biliye/dsh-voice-call (voice)」 |
 | 提交 → 合并 | 2026-09-12T14:02:31Z → **2026-09-13T02:56:53Z，由维护者 `fkysly` 合并**（merge commit `0237826`） |
-| 条目文件 | `data/plugins/biliye__dsh-voice-call.yml`（blob `c86e356`，915 字节，与 `contrib/biliye__dsh-voice-call.yml` 一致） |
+| 条目文件 | `data/plugins/biliye__dsh-voice-call.yml`（收录时 blob `c86e356`，915 字节，与当时的 `contrib/biliye__dsh-voice-call.yml` 一致） |
 | 分类 | `voice`（Voice & Audio） |
-| tarball | `releases/latest/download/dsh-voice-call.tgz` → release `v0.2.2`，附件 44263B，已下载 17 次 |
+| tarball | `releases/latest/download/dsh-voice-call.tgz` → 该链接**始终指向最新 release**（收录时是 `v0.2.2`，当前是 `v0.4.0`） |
 
 核对方式（只读，无需登录）：
 
@@ -261,3 +261,55 @@ npm view @biliye/dsh-voice-call version --registry=https://registry.npmjs.org/  
 
 之后发版：改 `package.json` 的 `version` → `git tag vX.Y.Z && git push origin vX.Y.Z`。
 **必须先改版本号**，否则 npm 会以「该版本已存在」拒绝；配置生效前该 workflow 会失败，属预期。
+
+## 0.4.0 条目更新与发版（2026-10-02）
+
+### 这版装了什么（对用户可见的三件事）
+
+1. **本地识别复用官方「语音输入」插件的 SenseVoice 模型**：免装第二份模型、免装 FunASR Server，语音不出本机
+   （设置页「识别引擎」选「本地识别 · 复用 DSH 语音输入模型」，模型缓存 `$DSH_HOME/speech-to-text/sensevoice/models/` 只存一份）。
+2. **修掉「升级 DSH 后插件没有自动播报」**：DSH 会话格式 v4 要求消息来源是「生产者自有 kind」，
+   插件旧写法（`kind:'plugin'`）会在**写入阶段**被拒，导致完成播报/任务汇报/人格注入全部静默丢失。
+   现在按目标会话的格式版本自动二选一（v4 用 `plugin:voice-assistant`，旧格式保持老包装）。
+   根因与证据见修复档案 `FIX-2026-10-02.md`（本机 `F:\xiangmu\update\dshCallUpdate\fix\`）。
+3. **明确支持桌面端 DSH**：桌面端（profile `desktop`）与 Web 端（profile `web`）用同一份插件，
+   命令里把 `--profile web` 换成 `--profile desktop` 即可。
+
+### 条目文件改了什么（本次更新 PR 的唯一内容）
+
+`contrib/biliye__dsh-voice-call.yml` 的 `description.en` / `description.zh` 重写为：
+
+- 开头点明「DSH 桌面端与 Web GUI 通用（同一份插件，只是 profile 名不同）」；
+- 语音识别补上「本地 SenseVoice（复用官方语音输入插件已下载的模型，免装第二份模型）」；
+- TTS 补上 MiMo 的**导演模式与音色克隆**，并写清 OpenAI 兼容 TTS；
+- 保留原有的悬浮球面板 / 浏览器端 VAD / 唤醒词模式 / 任务分发与完成播报。
+
+字段集合与收录时一致（`url` / `name` / `category` / `tarball` / `description`），**没有新增字段**
+（上游条目 schema 未变，`npm:` 键仍然禁止手写）；`tarball` 一行不动，它指向 `releases/latest`，自动跟到 v0.4.0。
+
+| 项 | 值 |
+|---|---|
+| 更新 PR | `awesome-dsh-plugin` 上的 `Update biliye/dsh-voice-call`（编号以 GitHub 上的实际 PR 为准） |
+| 变更文件 | `data/plugins/biliye__dsh-voice-call.yml`（描述两行） |
+| 分类 | 不变：`voice` |
+
+### 合并后什么时候可见
+
+push 触发的站点构建会刷新官网 `plugins.json`（`global` 区域立即生效）；**`china` 区域读的是 npm 上的
+`dsh-plugin-catalog` 夜间快照**，所以要等当天夜间构建（`23 2 * * *` UTC）之后，或临时把市场的
+「下载区域」切成 `global`（详见上文「⚠ 下载区域 = china」一节）。
+
+### npm 0.4.0
+
+`@biliye/dsh-voice-call@0.4.0` 是本次发布的版本（上一个已发布版本是 `@biliye/dsh-voice-call@0.3.0`）：
+
+```sh
+npm publish     # 版本号已改为 0.4.0；publishConfig.registry 固定 registry.npmjs.org
+npm view @biliye/dsh-voice-call version --registry=https://registry.npmjs.org/   # 期望 0.4.0
+```
+
+- `npm publish` 返回 **HTTP 202**（"being processed"）是正常的，registry 要几分钟才可见（0.3.0 那次约 4 分钟），
+  **不要据此判定失败或重发**（重复发同一版本会被 registry 拒绝）。
+- 同一个 tag 触发的 `publish-npm.yml`（OIDC）在 Trusted Publisher 配好前会红，属预期；配好后可改成"只推 tag"。
+- GitHub Release 由 tag 触发 `release.yml` 产出附件 `dsh-voice-call.tgz`，核对其存在后再宣传 tarball 安装路径：
+  `curl -sI https://github.com/biliye/dsh-voice-call/releases/latest/download/dsh-voice-call.tgz | head -1`。
