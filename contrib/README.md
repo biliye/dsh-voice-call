@@ -289,7 +289,7 @@ npm view @biliye/dsh-voice-call version --registry=https://registry.npmjs.org/  
 
 | 项 | 值 |
 |---|---|
-| 更新 PR | `awesome-dsh-plugin` 上的 `Update biliye/dsh-voice-call`（编号以 GitHub 上的实际 PR 为准） |
+| 更新 PR | [`awesome-dsh-plugin#6355`](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/6355)「Update biliye/dsh-voice-call (voice): desktop app + local SenseVoice」（2026-10-02 提交，**待维护者合并**） |
 | 变更文件 | `data/plugins/biliye__dsh-voice-call.yml`（描述两行） |
 | 分类 | 不变：`voice` |
 
@@ -313,3 +313,19 @@ npm view @biliye/dsh-voice-call version --registry=https://registry.npmjs.org/  
 - 同一个 tag 触发的 `publish-npm.yml`（OIDC）在 Trusted Publisher 配好前会红，属预期；配好后可改成"只推 tag"。
 - GitHub Release 由 tag 触发 `release.yml` 产出附件 `dsh-voice-call.tgz`，核对其存在后再宣传 tarball 安装路径：
   `curl -sI https://github.com/biliye/dsh-voice-call/releases/latest/download/dsh-voice-call.tgz | head -1`。
+
+### 发布状态（2026-10-02 实测）
+
+| 项 | 值 |
+|---|---|
+| 提交 | `main` 上三个提交：本地识别复用语音输入模型 → v4 消息来源契约修复 → 0.4.0 发行准备（`d8b56e2..dc2b7f3`） |
+| tag | `v0.4.0`（轻量 tag，指向发行准备那个提交） |
+| npm | `@biliye/dsh-voice-call@0.4.0` 已发布；`dist.shasum = cd05655cde6ec24074e379e65065e89a88c8d5f4`，**与本机 `npm pack` 的 sha1 一致**（上线的是本机这一份），`dist.unpackedSize = 244206` |
+| GitHub Release | `release.yml` run [`36956225065`](https://github.com/biliye/dsh-voice-call/actions/runs/36956225065) 成功；附件 `dsh-voice-call.tgz` 84828B，`releases/latest` 已指向 v0.4.0 |
+| CI 的 npm 发布 | `publish-npm.yml` run [`36956225067`](https://github.com/biliye/dsh-voice-call/actions/runs/36956225067) **失败（预期）**：Trusted Publisher 还没在 npmjs 配好，本机已发布 |
+| 市场条目 | update PR [`#6355`](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/6355) 已开，等维护者合并；合并后 `global` 区域立即刷新，`china` 区域等当天夜间目录快照 |
+
+> ⚠ 推送用的传输路线（本机）：`.git/config` 里的 `http.proxy=127.0.0.1:26561` + `http.sslBackend=openssl` 是**不能推**的组合；
+> 代理开着时用 `git -c http.sslBackend=schannel push origin <ref>`，代理没开时用
+> `git -c http.proxy= -c http.sslBackend=schannel push origin <ref>`（详见上文「传输提示」）。
+> 走 GitHub REST API 时同理：代理可用就带 `-Proxy`，代理挂了就直连（本机实测 api.github.com 直连可用）。
